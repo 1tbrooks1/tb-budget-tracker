@@ -2,7 +2,7 @@ let db;
 
 const request = indexedDB.open("budget_tracker", 1);
 
-req.onupgradeneeded = function (event) {
+request.onupgradeneeded = function (event) {
   const db = event.target.result;
   db.createObjectStore("pending", { autoIncrement: true });
 };
@@ -15,20 +15,20 @@ request.onsuccess = function (event) {
   }
 };
 
-request.onerror = function (event) {
+request.onerror = function (e) {
   console.log(e.target.errorCode);
 };
 
 function saveRecord(record) {
   const transaction = db.transaction(["pending"], "readwrite");
-  const budgetObjectStore = transaction.objectStore("pending");
-  budgetObjectStore.add(record);
+  const store = transaction.objectStore("pending");
+  store.add(record);
 }
 
 function uploadTransaction() {
-  const transaction = db.transaction(["pending", "readwrite"]);
-  const budgetObjectStore = transaction.objectStore("pending");
-  const getAll = budgetObjectStore.getAll();
+  const transaction = db.transaction(["pending"], "readwrite");
+  const store = transaction.objectStore("pending");
+  const getAll = store.getAll();
 
   getAll.onsuccess = function () {
     if (getAll.result.length > 0) {
@@ -41,10 +41,19 @@ function uploadTransaction() {
         },
       })
         .then((response) => response.json())
-        .then(() => {
+        .then((serverResponse) => {
+          if (serverResponse.message) {
+            throw new Error(serverResponse);
+          }
+
           const transaction = db.transaction(["pending"], "readwrite");
-          const budgetObjectStore = transaction.objectStore("pending");
-          budgetObjectStore.clear();
+          const store = transaction.objectStore("pending");
+          // clear all items in your store
+          store.clear();
+        })
+        .catch((err) => {
+          // set reference to redirect back here
+          console.log(err);
         });
     }
   };
